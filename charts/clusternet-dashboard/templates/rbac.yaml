@@ -1,0 +1,48 @@
+{{- if .Values.rbac.create }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "clusternet-dashboard.fullname" . }}-readonly
+  labels:
+    {{- include "clusternet-dashboard.labels" . | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources: ["namespaces", "events"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["clusters.clusternet.io"]
+    resources: ["managedclusters", "clusterregistrationrequests"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apps.clusternet.io"]
+    resources:
+      - subscriptions
+      - manifests
+      - globalizations
+      - localizations
+      - feedinventories
+      - helmreleases
+      - bases
+      - descriptions
+      - helmcharts
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["authorization.k8s.io"]
+    resources: ["selfsubjectaccessreviews"]
+    verbs: ["create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "clusternet-dashboard.fullname" . }}-readonly
+  labels:
+    {{- include "clusternet-dashboard.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "clusternet-dashboard.fullname" . }}-readonly
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "clusternet-dashboard.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+{{- end }}
