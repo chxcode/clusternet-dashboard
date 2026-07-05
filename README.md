@@ -98,13 +98,26 @@ GET /api/diagnostics
 
 ## Helm install
 
-Build and push an image first, then install the chart with your image reference:
+After the image and chart are published to Docker Hub, users can install the dashboard directly from the OCI chart:
+
+```bash
+helm upgrade --install clusternet-dashboard \
+  oci://registry-1.docker.io/changxuan/clusternet-dashboard \
+  --version 0.1.0 \
+  -n clusternet-system \
+  --create-namespace \
+  --set ingress.enabled=true \
+  --set ingress.ingressClassName=nginx \
+  --set ingress.path=/clusternet
+```
+
+If you install from the local chart source instead:
 
 ```bash
 helm upgrade --install clusternet-dashboard ./charts/clusternet-dashboard \
   -n clusternet-system \
   --create-namespace \
-  --set image.repository=ghcr.io/example/clusternet-dashboard \
+  --set image.repository=changxuan/clusternet-dashboard \
   --set image.tag=v0.1.0 \
   --set ingress.enabled=true \
   --set ingress.ingressClassName=nginx \
@@ -115,7 +128,7 @@ Minimal values example:
 
 ```yaml
 image:
-  repository: ghcr.io/example/clusternet-dashboard
+  repository: changxuan/clusternet-dashboard
   tag: v0.1.0
   pullPolicy: IfNotPresent
 
@@ -124,6 +137,78 @@ ingress:
   ingressClassName: nginx
   path: /clusternet
 ```
+
+## Publish release artifacts
+
+Build and verify the image locally:
+
+```bash
+docker build \
+  -t changxuan/clusternet-dashboard:v0.1.0 \
+  -t changxuan/clusternet-dashboard:latest \
+  .
+
+docker run --rm -p 18080:8080 changxuan/clusternet-dashboard:v0.1.0
+```
+
+In another terminal, verify:
+
+```bash
+curl http://127.0.0.1:18080/clusternet/api/health
+```
+
+Push the image to Docker Hub:
+
+```bash
+docker login -u changxuan
+docker push changxuan/clusternet-dashboard:v0.1.0
+docker push changxuan/clusternet-dashboard:latest
+```
+
+Package and push the Helm chart as a Docker Hub OCI artifact:
+
+```bash
+helm lint charts/clusternet-dashboard
+mkdir -p dist
+helm package charts/clusternet-dashboard --destination dist
+
+helm registry login registry-1.docker.io -u changxuan
+helm push dist/clusternet-dashboard-0.1.0.tgz \
+  oci://registry-1.docker.io/changxuan
+```
+
+The chart is then installable from:
+
+```text
+oci://registry-1.docker.io/changxuan/clusternet-dashboard --version 0.1.0
+```
+
+## Automated releases
+
+This repository includes a GitHub Actions release workflow. When a `v*.*.*` tag is pushed, it will:
+
+- run frontend, backend, audit, and Helm verification
+- build and push a multi-architecture Docker image for `linux/amd64` and `linux/arm64`
+- package the Helm chart
+- push the Helm chart to Docker Hub as an OCI artifact
+
+Required GitHub repository secrets:
+
+```text
+DOCKERHUB_USERNAME
+DOCKERHUB_TOKEN
+```
+
+Create a Docker Hub access token, then add both secrets in GitHub repository settings.
+
+To publish a new version:
+
+```bash
+git tag v0.1.1
+git push origin v0.1.1
+```
+
+The workflow can also be run manually from GitHub Actions with a tag input such as `v0.1.1`.
 
 ## Operational notes
 
