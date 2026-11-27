@@ -38,7 +38,7 @@ Follow the run in [GitHub Actions](https://github.com/chxcode/clusternet-dashboa
 | Stage | What the workflow does |
 | --- | --- |
 | Verify | Installs frontend dependencies with `npm ci --prefix web`, runs `npm audit` at the high threshold, tests and builds the frontend, then runs `go test ./...` and `helm lint`. |
-| Publish image | Builds the frontend and Go server into one image with Buildx for `linux/amd64` and `linux/arm64`. Pushes `$IMAGE:$TAG` and `$IMAGE:latest`. |
+| Publish image | Builds the frontend and Go server into one image with Buildx for `linux/amd64` and `linux/arm64`. Embeds the release tag in the server for the sidebar version. Pushes `$IMAGE:$TAG` and `$IMAGE:latest`. |
 | Publish chart | Sets the packaged chart's image tag and app version to `$TAG` and the chart version to `$VERSION` (without the leading `v`). Packages `dist/clusternet-dashboard-${VERSION}.tgz`, pushes it to Docker Hub as an OCI chart, then reads back its metadata with `helm show chart`. |
 
 The version overrides apply in the runner's checkout. If chart publication fails, the image may already be public. Cluster upgrades are a separate operation.
@@ -90,6 +90,7 @@ Sign in with a Docker Hub account that can push to the repository. Use a Buildx 
 docker login
 helm registry login registry-1.docker.io
 docker buildx build --platform linux/amd64,linux/arm64 \
+  --build-arg DASHBOARD_VERSION="$TAG" \
   -t "$IMAGE:$TAG" -t "$IMAGE:latest" --push . &&
   helm push "$PACKAGE" oci://registry-1.docker.io/changxuan
 ```
