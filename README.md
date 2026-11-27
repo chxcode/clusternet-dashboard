@@ -20,71 +20,53 @@ Clusternet Dashboard is intentionally read-only.
 
 Do not expose the dashboard publicly without authentication.
 
-## Local development
+## Helm install
 
-Prerequisites:
-
-- Go 1.26+
-- Node.js 22+
-- npm
-- kubectl access to a Clusternet parent / hub cluster, if you want real cluster data
-
-Run backend tests:
+The published Helm chart pins the matching dashboard image. To install version `0.1.1` in a Clusternet parent cluster, run the following with an OCI-capable Helm client.
 
 ```bash
-go test ./...
+helm upgrade --install clusternet-dashboard \
+  oci://registry-1.docker.io/changxuan/clusternet-dashboard \
+  --version 0.1.1 \
+  --namespace clusternet-system --create-namespace
 ```
 
-Run frontend tests:
+The chart defaults to a ClusterIP service. To open the dashboard locally, forward the service port and visit [the dashboard](http://localhost:8080/clusternet/).
 
 ```bash
-npm test --prefix web
+kubectl -n clusternet-system port-forward svc/clusternet-dashboard 8080:80
 ```
 
-Build frontend:
+If your cluster has a private Ingress controller, set `ingressClassName` to its class (`nginx` in this example). Save these values as `values.yaml` and add `-f values.yaml` to the install command.
 
-```bash
-npm run build --prefix web
+```yaml
+ingress:
+  enabled: true
+  ingressClassName: nginx
+  path: /clusternet
 ```
 
-Build backend:
+To install from a source checkout, use `./charts/clusternet-dashboard` as the chart argument, omit `--version`, and pass `--set-string image.tag=v0.1.1` to select the same image. See the [chart defaults](charts/clusternet-dashboard/values.yaml).
 
-```bash
-go build ./cmd/clusternet-dashboard
-```
+## How to contribute
 
-Run locally:
+When [reporting a bug](https://github.com/chxcode/clusternet-dashboard/issues), include the dashboard version, steps to reproduce it, and the expected and observed behavior. For a code or documentation change, start with the [contributing guide](CONTRIBUTING.md).
 
-```bash
-BASE_PATH=/clusternet STATIC_DIR=web/dist PORT=8080 ./clusternet-dashboard
-```
+- [Run the dashboard locally](CONTRIBUTING.md#run-the-dashboard-locally) with or without a Clusternet cluster.
+- [Check your changes](CONTRIBUTING.md#verify-your-change) and [open a pull request](CONTRIBUTING.md#open-a-pull-request) against `main`.
+- Maintainers can [publish and verify a release](docs/releasing.md). Pushing a version tag publishes a multi-architecture image and an OCI Helm chart to Docker Hub.
 
-Then open:
-
-```text
-http://localhost:8080/clusternet/
-```
-
-Health endpoint:
-
-```text
-http://localhost:8080/clusternet/api/health
-```
-
-The server loads Kubernetes config in this order:
-
-1. `KUBECONFIG`, when set
-2. in-cluster config
-3. `~/.kube/config`, for local development
-
-If Kubernetes config is unavailable, the server still starts and API endpoints return empty MVP responses.
+Report suspected vulnerabilities privately. See the [security policy](SECURITY.md).
 
 ## API endpoints
 
-All endpoints are mounted under `BASE_PATH`.
+These read-only endpoints are relative to `BASE_PATH`, which defaults to `/clusternet`.
 
 ```text
 GET /api/health
+GET /api/namespaces
+GET /api/events
+GET /api/clusternet/resources
 GET /api/clusters
 GET /api/subscriptions
 GET /api/subscriptions/{namespace}/{name}
@@ -96,135 +78,11 @@ GET /api/helmreleases
 GET /api/diagnostics
 ```
 
-## Helm install
-
-After the image and chart are published to Docker Hub, users can install the dashboard directly from the OCI chart:
-
-```bash
-helm upgrade --install clusternet-dashboard \
-  oci://registry-1.docker.io/changxuan/clusternet-dashboard \
-  --version 0.1.0 \
-  -n clusternet-system \
-  --create-namespace \
-  --set ingress.enabled=true \
-  --set ingress.ingressClassName=nginx \
-  --set ingress.path=/clusternet
-```
-
-If you install from the local chart source instead:
-
-```bash
-helm upgrade --install clusternet-dashboard ./charts/clusternet-dashboard \
-  -n clusternet-system \
-  --create-namespace \
-  --set image.repository=changxuan/clusternet-dashboard \
-  --set image.tag=v0.1.0 \
-  --set ingress.enabled=true \
-  --set ingress.ingressClassName=nginx \
-  --set ingress.path=/clusternet
-```
-
-Minimal values example:
-
-```yaml
-image:
-  repository: changxuan/clusternet-dashboard
-  tag: v0.1.0
-  pullPolicy: IfNotPresent
-
-ingress:
-  enabled: true
-  ingressClassName: nginx
-  path: /clusternet
-```
-
-## Publish release artifacts
-
-Build and verify the image locally:
-
-```bash
-docker build \
-  -t changxuan/clusternet-dashboard:v0.1.0 \
-  -t changxuan/clusternet-dashboard:latest \
-  .
-
-docker run --rm -p 18080:8080 changxuan/clusternet-dashboard:v0.1.0
-```
-
-In another terminal, verify:
-
-```bash
-curl http://127.0.0.1:18080/clusternet/api/health
-```
-
-Push the image to Docker Hub:
-
-```bash
-docker login -u changxuan
-docker push changxuan/clusternet-dashboard:v0.1.0
-docker push changxuan/clusternet-dashboard:latest
-```
-
-Package and push the Helm chart as a Docker Hub OCI artifact:
-
-```bash
-helm lint charts/clusternet-dashboard
-mkdir -p dist
-helm package charts/clusternet-dashboard --destination dist
-
-helm registry login registry-1.docker.io -u changxuan
-helm push dist/clusternet-dashboard-0.1.0.tgz \
-  oci://registry-1.docker.io/changxuan
-```
-
-The chart is then installable from:
-
-```text
-oci://registry-1.docker.io/changxuan/clusternet-dashboard --version 0.1.0
-```
-
-## Automated releases
-
-This repository includes a GitHub Actions release workflow. When a `v*.*.*` tag is pushed, it will:
-
-- run frontend, backend, audit, and Helm verification
-- build and push a multi-architecture Docker image for `linux/amd64` and `linux/arm64`
-- package the Helm chart
-- push the Helm chart to Docker Hub as an OCI artifact
-
-Required GitHub repository secrets:
-
-```text
-DOCKERHUB_USERNAME
-DOCKERHUB_TOKEN
-```
-
-Create a Docker Hub access token, then add both secrets in GitHub repository settings.
-
-To publish a new version:
-
-```bash
-git tag v0.1.1
-git push origin v0.1.1
-```
-
-The workflow can also be run manually from GitHub Actions with a tag input such as `v0.1.1`.
-
 ## Operational notes
 
 - HelmRelease listing can be slower than Subscription listing on large clusters. The frontend loads HelmReleases separately so the main Subscriptions page is not blocked.
 - Older Clusternet versions may not expose `status.completedReleases`. In that case the UI labels fallback progress as observed status only.
 - The dashboard is an optional component and can be upgraded independently from Clusternet core.
-
-## Verification before release
-
-```bash
-go test ./...
-npm test --prefix web
-npm run build --prefix web
-helm lint charts/clusternet-dashboard
-go build ./cmd/clusternet-dashboard
-```
 
 ## Acknowledgements
 
