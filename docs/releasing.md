@@ -39,7 +39,7 @@ git tag "$TAG" "$COMMIT" && git push origin "refs/tags/$TAG"
 
 The workflow checks the tag against the files in that checkout before authenticating to Docker Hub. It runs the frontend dependency audit, tests and build, Go tests and Helm lint. Buildx publishes `$IMAGE:$TAG` and `$IMAGE:latest` for Linux AMD64 and ARM64, embedding the tag for the dashboard's version display. Helm packages the checked-in chart and publishes `$CHART` at `$VERSION`. If chart publication fails, the image may already be public. [Follow the Release workflow](https://github.com/chxcode/clusternet-dashboard/actions/workflows/release.yaml)
 
-For a manual workflow run, choose the ref containing the release pins and enter the matching tag. The selected ref provides the source revision. Dispatch itself does not create a Git tag.
+For a manual run, select the workflow ref and enter the matching release tag. By default the selected ref also provides the source. To retry a tagged release using a newer workflow, enable **Build the source at the existing Git tag**. The image revision label records the checked-out source commit. The workflow reuses the verified frontend bundle for both image architectures. Dispatch itself does not create a tag.
 
 ## Verify the artifacts
 
