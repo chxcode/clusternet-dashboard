@@ -1,105 +1,69 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { AppResources } from './AppResources';
+import type { Subscription } from './api';
+
+const subscription: Subscription = {
+  name: 'demo-sub',
+  namespace: 'fleet',
+  status: 'Progressing',
+  desiredReleases: 3,
+  completedReleases: 1,
+  observedReleases: 2,
+  completionKnown: true,
+  bindingClusterCount: 3,
+  bindingClusters: [],
+};
 
 describe('AppResources', () => {
-  it('renders subscriptions and manifests', () => {
-    render(
-      <AppResources
-        subscriptions={[{
-          name: 'demo-sub',
-          namespace: 'default',
-          status: 'Progressing',
-          desiredReleases: 3,
-          completedReleases: 2,
-          observedReleases: 2,
-          completionKnown: true,
-          bindingClusterCount: 2,
-          bindingClusters: ['default/child-a', 'default/child-b'],
-        }]}
-        manifests={[{
-          name: 'demo-manifest',
-          namespace: 'default',
-          templateKind: 'Deployment',
-          templateName: 'nginx',
-          templateNamespace: 'demo',
-        }]}
-        helmReleases={[{
-          name: 'demo-helm-demo-app',
-          namespace: 'child-a',
-          clusterName: 'child-a',
-          subscriptionName: 'demo-app',
-          subscriptionNamespace: 'demo-app',
-          releaseName: 'demo-app',
-          targetNamespace: 'demo-app',
-          chart: 'demo-chart',
-          chartVersion: '1.2.3',
-          phase: 'failed',
-          description: 'install failed',
-          revision: 5,
-        }]}
-        loading={false}
-      />,
-    );
+  it('links to the namespaced subscription and shows observed and completed counts separately', () => {
+    render(<AppResources subscriptions={[subscription]} manifests={[{
+      name: 'demo-manifest', namespace: 'fleet', templateKind: 'Deployment', templateName: 'nginx',
+    }]} />);
 
-    expect(screen.getByText('demo-sub')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'demo-sub' })).toHaveAttribute('href', expect.stringContaining('/propagation?namespace=fleet&name=demo-sub'));
     expect(screen.getByText('2 / 3')).toBeInTheDocument();
-    expect(screen.getByText('demo-manifest')).toBeInTheDocument();
+    expect(screen.getByText('1 / 3')).toBeInTheDocument();
     expect(screen.getByText('Deployment / nginx')).toBeInTheDocument();
-    expect(screen.getByText('HelmReleases')).toBeInTheDocument();
-    expect(screen.getByText('demo-helm-demo-app')).toBeInTheDocument();
-    expect(screen.getByText('failed')).toBeInTheDocument();
-    expect(screen.getByText('install failed')).toBeInTheDocument();
   });
 
-  it('renders compatibility hint when completed release count is not available', () => {
-    render(
-      <AppResources
-        subscriptions={[{
-          name: 'legacy-sub',
-          status: 'Progressing',
-          desiredReleases: 18,
-          completedReleases: 0,
-          observedReleases: 17,
-          completionKnown: false,
-          bindingClusterCount: 18,
-          bindingClusters: [],
-        }]}
-        manifests={[]}
-        loading={false}
-      />,
-    );
-
-    expect(screen.getByText('17 observed / 18')).toBeInTheDocument();
-    expect(screen.getByText('Observed status only')).toBeInTheDocument();
+  it('keeps subscription data visible when manifests cannot be read', () => {
+    render(<AppResources subscriptions={[{ ...subscription, completionKnown: false }]} manifests={undefined} manifestError="403" />);
+    expect(screen.getByText('完成数未知')).toBeInTheDocument();
+    expect(screen.getByText('2 / 3')).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent('403');
+    expect(screen.queryByText('正在加载清单…')).not.toBeInTheDocument();
   });
 
-  it('renders empty state when there are no application resources', () => {
-    render(<AppResources subscriptions={[]} manifests={[]} loading={false} />);
-
-    expect(screen.getByText('当前没有发现 Subscriptions、Manifests 或 HelmReleases')).toBeInTheDocument();
+  it('gives the two lists independent loading and empty states', () => {
+    render(<AppResources subscriptions={undefined} manifests={[]} />);
+    expect(screen.getByRole('status')).toHaveTextContent('正在加载订阅');
+    expect(screen.getByText('当前没有 Manifest 清单。')).toBeInTheDocument();
   });
 
-  it('does not block subscriptions while helm releases are still loading', () => {
-    render(
-      <AppResources
-        subscriptions={[{
-          name: 'demo-sub',
-          status: 'Progressing',
-          desiredReleases: 1,
-          completedReleases: 0,
-          observedReleases: 0,
-          completionKnown: false,
-          bindingClusterCount: 1,
-          bindingClusters: [],
-        }]}
-        manifests={[]}
-        helmReleasesLoading={true}
-        loading={false}
-      />,
-    );
+  it('shows static weights next to each subscriber and keeps actual bindings apart from reports', () => {
+    render(<AppResources subscriptions={[{ ...subscription, distribution: {
+      strategy: 'Dividing', dividingType: 'Static', targetScope: 'selector', selectors: ['region=east', 'region=west'],
+      subscriberWeights: [0, 2], subgroupConfigured: true, subgroupMinClusters: [null, 1],
+    } }]} manifests={[]} />);
+    const row = within(screen.getByRole('row', { name: /demo-sub/ }));
+    expect(row.getByText('副本分摊')).toBeVisible();
+    expect(row.getByText('静态 · 按权重')).toBeVisible();
+    expect(row.getByText('按子组调度')).toBeVisible();
+    expect(row.getAllByRole('listitem').map(el => el.textContent)).toEqual([
+      'region=east权重 0', 'region=west子组 minClusters = 1权重 2',
+    ]);
+    expect(row.getByText('3 个集群')).toBeVisible();
+    expect(row.getByText('2 / 3')).toBeVisible();
+    expect(row.getByText('1 / 3')).toBeVisible();
+  });
 
-    expect(screen.getByText('demo-sub')).toBeInTheDocument();
-    expect(screen.getByText('正在加载 HelmReleases...')).toBeInTheDocument();
+  it('keeps a missing binding list distinct from an explicitly empty list', () => {
+    const base = { ...subscription, bindingClusterCount: 0 };
+    const { rerender } = render(<AppResources subscriptions={[{ ...base, bindingClusters: null }]} manifests={[]} />);
+    expect(screen.getByText('未上报')).toBeVisible();
+    expect(screen.queryByText('0 个集群')).toBeNull();
+    rerender(<AppResources subscriptions={[{ ...base, bindingClusters: [] }]} manifests={[]} />);
+    expect(screen.getByText('0 个集群')).toBeVisible();
   });
 });

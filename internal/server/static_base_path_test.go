@@ -35,3 +35,17 @@ func TestServedIndexInjectsConfiguredBasePath(t *testing.T) {
 		t.Fatalf("expected configured base path in index, got %s", body)
 	}
 }
+
+func TestDeepLinkFindsBuiltAssetsAtRuntimeMount(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "index.html"), []byte(`<link href="./assets/app.css"><script src="./assets/app.js"></script>`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	for _, base := range []string{"", "/tools/fleet"} {
+		res := workspaceGET(New(config.Config{BasePath: base, StaticDir: dir}), base+"/clusters?q=edge")
+		if res.Code != http.StatusOK || !strings.Contains(res.Body.String(), `href="`+base+`/assets/app.css"`) ||
+			!strings.Contains(res.Body.String(), `src="`+base+`/assets/app.js"`) {
+			t.Errorf("mount %q: %s", base, res.Body.String())
+		}
+	}
+}

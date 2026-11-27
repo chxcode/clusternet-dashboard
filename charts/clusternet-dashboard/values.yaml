@@ -5,6 +5,22 @@ image:
 
 imagePullSecrets: []
 
+labelEditing:
+  enabled: false
+  allowedHosts: [] # Additional public hostnames for authenticated reverse proxies.
+
+registrationOperations:
+  deleteFailedRequests: false
+
+releaseOperations:
+  publishNativeWorkloads: false
+  deployCharts: false
+  editChartSources: false
+  triage: false
+  chartVersionEditing: false
+  deleteFailedRelease: false
+  allowedHosts: []
+
 replicaCount: 1
 
 nameOverride: ""
@@ -30,6 +46,7 @@ ingress:
 
 env:
   basePath: ""
+  parentClusterName: ""
 
 podSecurityContext:
   runAsNonRoot: true

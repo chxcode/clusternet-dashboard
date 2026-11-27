@@ -1,0 +1,27 @@
+{{- if and .Values.rbac.create .Values.labelEditing.enabled }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "clusternet-dashboard.fullname" . }}-label-editor
+  labels:
+    {{- include "clusternet-dashboard.labels" . | nindent 4 }}
+rules:
+  - apiGroups: ["clusters.clusternet.io"]
+    resources: ["managedclusters"]
+    verbs: ["patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "clusternet-dashboard.fullname" . }}-label-editor
+  labels:
+    {{- include "clusternet-dashboard.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "clusternet-dashboard.fullname" . }}-label-editor
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "clusternet-dashboard.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+{{- end }}

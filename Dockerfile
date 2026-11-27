@@ -13,7 +13,8 @@ COPY go.mod go.sum ./
 RUN go mod download
 COPY cmd/ ./cmd/
 COPY internal/ ./internal/
-RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/clusternet-dashboard ./cmd/clusternet-dashboard
+ARG DASHBOARD_VERSION
+RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w -X github.com/chxcode/clusternet-dashboard/internal/config.releaseVersion=${DASHBOARD_VERSION}" -o /out/clusternet-dashboard ./cmd/clusternet-dashboard
 
 FROM alpine:3.22
 WORKDIR /app

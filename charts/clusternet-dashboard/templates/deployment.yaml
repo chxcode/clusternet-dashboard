@@ -30,6 +30,54 @@ spec:
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
           env:
+            {{- if .Values.releaseOperations.triage }}
+            - name: ENABLE_RELEASE_TRIAGE
+              value: "true"
+            - name: TRIAGE_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: TRIAGE_CONFIGMAP
+              value: {{ printf "%s-triage" (include "clusternet-dashboard.fullname" .) | quote }}
+            {{- end }}
+            {{- if .Values.releaseOperations.chartVersionEditing }}
+            - name: ENABLE_CHART_VERSION_EDITING
+              value: "true"
+            {{- end }}
+            {{- if .Values.releaseOperations.deleteFailedRelease }}
+            - name: ENABLE_FAILED_RELEASE_DELETION
+              value: "true"
+            {{- end }}
+            {{- if .Values.releaseOperations.deployCharts }}
+            - name: ENABLE_CHART_DEPLOYMENT
+              value: "true"
+            {{- end }}
+            {{- if .Values.releaseOperations.editChartSources }}
+            - name: ENABLE_CHART_SOURCE_EDITING
+              value: "true"
+            {{- end }}
+            {{- if .Values.registrationOperations.deleteFailedRequests }}
+            - name: ENABLE_FAILED_REGISTRATION_DELETION
+              value: "true"
+            {{- end }}
+            {{- if .Values.releaseOperations.publishNativeWorkloads }}
+            - name: ENABLE_NATIVE_PUBLISHING
+              value: "true"
+            {{- end }}
+            {{- if or .Values.releaseOperations.publishNativeWorkloads .Values.registrationOperations.deleteFailedRequests .Values.releaseOperations.editChartSources .Values.releaseOperations.triage .Values.releaseOperations.chartVersionEditing .Values.releaseOperations.deleteFailedRelease .Values.releaseOperations.deployCharts }}
+            - name: WORKSPACE_WRITE_ALLOWED_HOSTS
+              value: {{ append .Values.releaseOperations.allowedHosts (ternary .Values.ingress.host "" .Values.ingress.enabled) | compact | uniq | join "," | quote }}
+            {{- end }}
+            {{- with .Values.env.parentClusterName }}
+            - name: PARENT_CLUSTER_NAME
+              value: {{ . | quote }}
+            {{- end }}
+            {{- if .Values.labelEditing.enabled }}
+            - name: ENABLE_LABEL_EDITING
+              value: "true"
+            - name: LABEL_EDITING_ALLOWED_HOSTS
+              value: {{ append .Values.labelEditing.allowedHosts (ternary .Values.ingress.host "" .Values.ingress.enabled) | compact | uniq | join "," | quote }}
+            {{- end }}
             - name: BASE_PATH
               value: {{ include "clusternet-dashboard.basePath" . | quote }}
             - name: PORT

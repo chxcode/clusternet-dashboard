@@ -1,0 +1,9 @@
+.source-editor { width:min(740px,calc(100vw - 26px)); overflow-wrap:anywhere; }
+.source-editor h3 { margin:14px 0 8px; font-size:15px; }
+.source-editor .source-toolbar { display:flex; gap:8px; margin-bottom:8px; }
+.source-toolbar button { border:1px solid var(--control-border); border-radius:6px; background:var(--surface); color:var(--text); padding:5px 10px; cursor:pointer; }
+.source-editor footer { flex-wrap:wrap; }
+.source-diff,.source-refs { max-height:32vh; overflow:auto; }
+.source-diff table { width:100%; border-collapse:collapse; font-size:13px; }
+.source-diff td,.source-diff th { text-align:start; padding:6px; border-bottom:1px solid var(--border); }
+.source-diff td { font-family:ui-monospace,monospace; }

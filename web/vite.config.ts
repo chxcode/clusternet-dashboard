@@ -7,12 +7,13 @@ function normalizeBasePath(value: string | undefined): string {
   return withLeadingSlash.endsWith('/') ? withLeadingSlash : `${withLeadingSlash}/`;
 }
 
-export default defineConfig(({ mode }) => {
+export default defineConfig(({ mode, command }) => {
   const env = loadEnv(mode, process.cwd(), '');
   const base = normalizeBasePath(env.BASE_PATH || '/clusternet');
 
   return {
-    base,
+    // Production assets resolve against the mount selected by the running server.
+    base: command === 'build' ? './' : base,
     plugins: [react()],
     test: {
       environment: 'jsdom',

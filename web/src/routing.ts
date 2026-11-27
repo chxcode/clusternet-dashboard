@@ -1,6 +1,6 @@
 import { getBasePath } from './basePath';
 
-export type DashboardPage = 'overview' | 'managed-clusters' | 'subscriptions' | 'propagation-status' | 'diagnostics';
+export type DashboardPage = 'overview' | 'managed-clusters' | 'subscriptions' | 'propagation-status' | 'diagnostics' | 'releases';
 
 const routeByPage: Record<DashboardPage, string> = {
   overview: '/overview',
@@ -8,6 +8,7 @@ const routeByPage: Record<DashboardPage, string> = {
   subscriptions: '/subscriptions',
   'propagation-status': '/propagation',
   diagnostics: '/diagnostics',
+  releases: '/releases',
 };
 
 const pageByRoute: Record<string, DashboardPage> = {
@@ -17,6 +18,7 @@ const pageByRoute: Record<string, DashboardPage> = {
   '/subscriptions': 'subscriptions',
   '/propagation': 'propagation-status',
   '/diagnostics': 'diagnostics',
+  '/releases': 'releases',
 };
 
 export function pageFromPath(pathname: string, basePath = getBasePath()): DashboardPage {

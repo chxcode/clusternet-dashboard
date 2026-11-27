@@ -13,7 +13,7 @@ export function normalizeBasePath(value?: string): string {
 }
 
 export function getBasePath(): string {
-  return normalizeBasePath(window.__CLUSTERNET_DASHBOARD_BASE_PATH__ || import.meta.env.BASE_URL);
+  return normalizeBasePath(window.__CLUSTERNET_DASHBOARD_BASE_PATH__ ?? import.meta.env.BASE_URL);
 }
 
 export function apiPath(path: string): string {

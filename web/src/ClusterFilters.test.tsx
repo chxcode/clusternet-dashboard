@@ -12,7 +12,7 @@ describe('ClusterFilters', () => {
 
     fireEvent.change(screen.getByLabelText('按应用筛选'), { target: { value: 'sample-app' } });
     fireEvent.change(screen.getByLabelText('按状态筛选'), { target: { value: 'offline' } });
-    fireEvent.change(screen.getByLabelText('按标签搜索'), { target: { value: 'customer=demo' } });
+    fireEvent.change(screen.getByRole('searchbox', { name: '搜索集群' }), { target: { value: 'customer=demo' } });
 
     expect(onChange).toHaveBeenCalledWith({ status: 'all', app: 'sample-app', labelQuery: '' });
     expect(onChange).toHaveBeenCalledWith({ status: 'offline', app: 'all', labelQuery: '' });

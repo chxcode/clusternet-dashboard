@@ -1,56 +1,40 @@
 import type { Subscription } from './api';
-import { SubscriptionSummaryMeta } from './SubscriptionSummary';
+import './propagation.css';
+
+type SubscriptionRef = Pick<Subscription, 'name' | 'namespace'>;
 
 type SubscriptionPickerProps = {
   subscriptions: Subscription[];
   loading: boolean;
   error?: string;
-  selectedSubscription?: Subscription;
+  selectedSubscription?: SubscriptionRef;
   onSelect: (subscription: Subscription) => void;
 };
 
+function objectKey(object: SubscriptionRef) {
+  return `${object.namespace || 'default'}/${object.name}`;
+}
+
 export function SubscriptionPicker({ subscriptions, loading, error, selectedSubscription, onSelect }: SubscriptionPickerProps) {
-  if (loading) {
-    return <section className="detail-panel">正在加载 Subscriptions...</section>;
-  }
-
-  if (error) {
-    return <section className="detail-panel detail-panel--error">{error}</section>;
-  }
-
+  const selectedKey = selectedSubscription ? objectKey(selectedSubscription) : '';
+  const listed = subscriptions.some(item => objectKey(item) === selectedKey);
+  const noOptions = subscriptions.length === 0;
+  let placeholder = '选择一个订阅';
+  if (noOptions) placeholder = loading ? '正在加载订阅…' : error ? '订阅列表读取失败' : '当前没有订阅';
   return (
-    <section className="detail-panel" aria-label="Subscription selector">
-      <div className="section-heading">
-        <p className="eyebrow">Propagation Status</p>
-        <h2>选择 Subscription</h2>
-      </div>
-      {subscriptions.length === 0 ? (
-        <p className="empty-state">当前没有发现 Subscriptions</p>
-      ) : (
-        <div className="resource-list">
-          {subscriptions.map((subscription) => {
-            const selected = selectedSubscription?.name === subscription.name && (selectedSubscription.namespace || 'default') === (subscription.namespace || 'default');
-            return (
-              <button
-                type="button"
-                className={selected ? 'resource-row resource-row--button resource-row--selected' : 'resource-row resource-row--button'}
-                key={`${subscription.namespace}/${subscription.name}`}
-                onClick={() => onSelect(subscription)}
-              >
-                <div>
-                  <strong>{subscription.name}</strong>
-                  <span>{subscription.namespace || 'default'}</span>
-                </div>
-                <div>
-                  <strong>{subscription.status}</strong>
-                  <span>{subscription.bindingClusterCount} clusters</span>
-                </div>
-                <SubscriptionSummaryMeta subscription={subscription} />
-              </button>
-            );
-          })}
-        </div>
-      )}
+    <section className="pd-picker" aria-label="订阅选择">
+      <label htmlFor="propagation-subscription">订阅</label>
+      <select id="propagation-subscription" value={selectedKey} disabled={noOptions}
+        onChange={event => {
+          const selected = subscriptions.find(item => objectKey(item) === event.target.value);
+          if (selected) onSelect(selected);
+        }}>
+        <option value="" disabled>{placeholder}</option>
+        {selectedKey && !listed && <option value={selectedKey}>{selectedKey}</option>}
+        {subscriptions.map(item => <option key={objectKey(item)} value={objectKey(item)}>{objectKey(item)}</option>)}
+      </select>
+      {error && <span className="pd-warning" role="alert">订阅列表未更新 · {error}</span>}
+      {loading && !noOptions && <span role="status">正在刷新…</span>}
     </section>
   );
 }
