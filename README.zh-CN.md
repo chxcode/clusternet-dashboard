@@ -4,8 +4,6 @@
 
 Clusternet Dashboard 是面向 [Clusternet](https://github.com/clusternet/clusternet) 父集群的轻量运维面板。可以查看集群健康和分发进度，发布 Helm Chart 或原生 YAML，处理失败的发布及注册请求。面板默认只读，各项写操作可独立开启。
 
-本文介绍当前源码中的功能。下方 Helm 命令安装的是 `0.1.1` 发布版，可用功能见[该版本的 README](https://github.com/chxcode/clusternet-dashboard/blob/v0.1.1/README.md)。
-
 通过面板可以排查以下问题：
 
 - **子集群是否就绪？** 查看就绪条件、心跳上报周期、健康探针和最近上报的节点容量。
@@ -55,24 +53,26 @@ Helm Chart 默认配置只读 RBAC。启用标签编辑会授予 ManagedCluster 
 
 当前版本未内置用户认证。请将面板部署在 VPN、私有 Ingress 或具备身份认证的网关后面。通过公网提供访问时，请先配置身份认证。
 
-## 使用 Helm 安装
+## 使用 Helm 安装或升级
 
-已发布的 Helm Chart 固定使用与其版本匹配的面板镜像。要安装 `0.1.1`，请将 kubeconfig 切换到目标 Clusternet 父集群，并使用支持 OCI 的 Helm 客户端执行以下命令。
+将 kubeconfig 切换到目标 Clusternet 父集群。OCI Chart 默认使用配套镜像 `docker.io/changxuan/clusternet-dashboard:v0.2.0`。首次安装和升级使用同一条命令，升级时请沿用原有的 release 名称和命名空间。
 
 ```bash
 helm upgrade --install clusternet-dashboard \
   oci://registry-1.docker.io/changxuan/clusternet-dashboard \
-  --version 0.1.1 \
+  --version 0.2.0 \
   --namespace clusternet-system --create-namespace
 ```
 
-Chart 默认创建 ClusterIP 类型的 Service。运行端口转发后，即可在浏览器里[打开本地面板](http://localhost:8080/clusternet/)。
+**已有自定义配置时**，在升级命令中添加 `--reset-values -f dashboard-values.yaml`，将核对过的配置应用到新版 Chart 的默认值上。可用 `helm get values clusternet-dashboard -n clusternet-system -o yaml` 查看原有覆盖项。移除旧的 `image.tag` 覆盖项可让 Helm 使用与 Chart 配套的镜像。
+
+默认 Service 类型为 ClusterIP。运行端口转发后，即可[打开本地面板](http://localhost:8080/clusternet/)。
 
 ```bash
 kubectl -n clusternet-system port-forward svc/clusternet-dashboard 8080:80
 ```
 
-如果集群使用私有 Ingress 控制器，将 `ingressClassName` 设置为对应的 IngressClass 名称。下面以 `nginx` 为例。将配置保存为 `values.yaml`，在安装命令中加入 `-f values.yaml`。
+如使用私有 Ingress，将以下设置写入配置文件，用 `-f dashboard-values.yaml` 加载，并将 `nginx` 替换为实际的 IngressClass。
 
 ```yaml
 ingress:
@@ -81,11 +81,11 @@ ingress:
   path: /clusternet
 ```
 
-从源码目录使用本地 Chart 安装时，将命令中的 Chart 地址替换为 `./charts/clusternet-dashboard`，移除 `--version`。如需使用上述发布版的镜像，添加 `--set-string image.tag=v0.1.1`。其他选项见 [Chart 默认配置](charts/clusternet-dashboard/values.yaml)。
+从发布版本的源码安装时，把 OCI 地址替换为 `./charts/clusternet-dashboard`，移除 `--version`。源码 Chart 已固定使用配套的发布镜像。[Chart 默认配置](charts/clusternet-dashboard/values.yaml)
 
 ### 父集群显示名称与可选操作
 
-以下配置适用于包含相应功能的构建。测试尚未发布的改动时，请使用同一源码版本的 Chart 与镜像。
+测试开发版本时，请使用同一源码版本的 Chart 与镜像。
 
 ```yaml
 env:

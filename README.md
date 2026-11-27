@@ -4,8 +4,6 @@
 
 A lightweight operations dashboard for [Clusternet](https://github.com/clusternet/clusternet). Use it to inspect cluster health and distribution, publish Helm charts or native YAML, and follow up on failed releases and cluster registrations. Write operations are opt-in.
 
-This guide covers the current source tree. If you install `0.1.1` with the Helm command below, see the [README for that release](https://github.com/chxcode/clusternet-dashboard/blob/v0.1.1/README.md) for its available features.
-
 Use the dashboard on a Clusternet parent cluster to investigate:
 
 - Cluster readiness conditions, heartbeat intervals, health probes and reported node capacity
@@ -59,24 +57,26 @@ The default installation provides read-only access.
 
 Do not expose the dashboard publicly without authentication.
 
-## Helm install
+## Install or upgrade with Helm
 
-The published Helm chart pins the matching dashboard image. To install version `0.1.1` in a Clusternet parent cluster, run the following with an OCI-capable Helm client.
+Point your kubeconfig at the Clusternet parent cluster. The OCI chart installs the matching image `docker.io/changxuan/clusternet-dashboard:v0.2.0`. Run the same command for a first install or an upgrade, using the existing release name and namespace when upgrading.
 
 ```bash
 helm upgrade --install clusternet-dashboard \
   oci://registry-1.docker.io/changxuan/clusternet-dashboard \
-  --version 0.1.1 \
+  --version 0.2.0 \
   --namespace clusternet-system --create-namespace
 ```
 
-The chart defaults to a ClusterIP service. To open the dashboard locally, forward the service port and visit [the dashboard](http://localhost:8080/clusternet/).
+**Upgrading a customized installation?** Pass your reviewed values file with `--reset-values -f dashboard-values.yaml` to apply your settings on top of the new chart defaults. Retrieve your current overrides with `helm get values clusternet-dashboard -n clusternet-system -o yaml` and remove any old `image.tag` override so Helm selects the matching image.
+
+The default Service is ClusterIP. Open a port-forward, then visit the [local dashboard](http://localhost:8080/clusternet/).
 
 ```bash
 kubectl -n clusternet-system port-forward svc/clusternet-dashboard 8080:80
 ```
 
-If your cluster has a private Ingress controller, set `ingressClassName` to its class (`nginx` in this example). Save these values as `values.yaml` and add `-f values.yaml` to the install command.
+For a private Ingress, add these settings to your values file and pass it with `-f dashboard-values.yaml`. Replace `nginx` with your controller's IngressClass.
 
 ```yaml
 ingress:
@@ -85,11 +85,11 @@ ingress:
   path: /clusternet
 ```
 
-To install from a source checkout, use `./charts/clusternet-dashboard` as the chart argument, omit `--version`, and pass `--set-string image.tag=v0.1.1` to select the same image. See the [chart defaults](charts/clusternet-dashboard/values.yaml).
+To install the chart from a release checkout, replace the OCI reference with `./charts/clusternet-dashboard` and omit `--version`. The source chart also pins the release image. [Chart defaults](charts/clusternet-dashboard/values.yaml)
 
 ### Workspace name and optional operations
 
-These settings apply to builds containing the workspace and editor features. Build the image from the same revision as the chart when testing unreleased changes.
+For development builds, use a chart and image from the same revision.
 
 ```yaml
 env:
