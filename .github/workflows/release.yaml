@@ -10,9 +10,17 @@ on:
         description: 'Release tag recorded in this checkout, for example v1.2.3'
         required: true
         type: string
+      build_existing_tag:
+        description: 'Build the source at the existing Git tag'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
+
+concurrency:
+  group: publish-clusternet-dashboard
+  cancel-in-progress: false
 
 env:
   IMAGE_REPOSITORY: docker.io/changxuan/clusternet-dashboard
@@ -27,6 +35,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.build_existing_tag && format('refs/tags/{0}', inputs.tag) || github.sha }}
 
       - name: Check release version
         id: version
@@ -42,6 +52,7 @@ jobs:
           python3 scripts/release-version.py check "$release_tag"
 
           echo "release_tag=${release_tag}" >> "$GITHUB_OUTPUT"
+          echo "revision=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
           echo "CHART_VERSION=${release_tag#v}" >> "$GITHUB_ENV"
 
       - name: Setup Go
@@ -71,6 +82,12 @@ jobs:
           go test ./...
           helm lint "$CHART_PATH"
 
+      - name: Prepare verified frontend for both image platforms
+        run: |
+          test -s web/dist/index.html
+          mkdir -p "$RUNNER_TEMP/dashboard-web/src/web"
+          cp -R web/dist "$RUNNER_TEMP/dashboard-web/src/web/"
+
       - name: Setup QEMU
         uses: docker/setup-qemu-action@v3
 
@@ -90,6 +107,8 @@ jobs:
           context: .
           platforms: linux/amd64,linux/arm64
           push: true
+          build-contexts: |
+            web-builder=${{ runner.temp }}/dashboard-web
           build-args: |
             DASHBOARD_VERSION=${{ steps.version.outputs.release_tag }}
           tags: |
@@ -100,7 +119,7 @@ jobs:
             org.opencontainers.image.description=A lightweight dashboard for Clusternet
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.version=${{ steps.version.outputs.release_tag }}
-            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.revision=${{ steps.version.outputs.revision }}
 
       - name: Package Helm chart
         shell: bash
