@@ -1,0 +1,29 @@
+.cluster-inspect {
+  display: block; margin-top: 4px; padding: 2px 0; border: 0; background: transparent;
+  color: var(--accent); cursor: pointer; font: inherit; font-size: 12px; font-weight: 600;
+}
+.cw-table .cluster-detail-row > td { padding: 0; }
+.cluster-evidence { background: var(--surface-muted); padding: 16px 20px 20px; text-align: left; }
+.cluster-evidence header { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 16px; margin-bottom: 12px; }
+.cluster-evidence h3, .cluster-evidence h4, .cluster-evidence p { margin: 0; }
+.cluster-evidence h3 { font-size: 15px; }
+.cluster-evidence h4 { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; }
+.cluster-evidence header span, .cluster-evidence small { color: var(--text-muted); font-size: 12px; }
+.cluster-evidence-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 215px), 1fr)); gap: 12px 20px; }
+.cluster-evidence-grid section { min-width: 0; }
+.cluster-evidence dl, .cluster-conditions { margin: 0; }
+.cluster-evidence dl > div, .cluster-resources [role=row] { display: grid; gap: 8px; align-items: baseline; }
+.cluster-evidence dl > div { grid-template-columns: auto 1fr; justify-content: space-between; }
+.cluster-evidence dd { min-width: 0; text-align: right; margin: 0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.cluster-evidence section > a { display: inline-block; margin-top: 6px; }
+.cluster-conditions { list-style: none; padding: 0; display: grid; gap: 8px; }
+.cluster-conditions strong, .cluster-conditions code { display: block; }
+.cluster-conditions p { white-space: pre-wrap; overflow-wrap: anywhere; }
+.cluster-resources [role=row] { grid-template-columns: 0.7fr 1fr 1fr; }
+.cluster-resources [role=columnheader] { color: var(--text-muted); font-size: 12px; }
+@container (max-width: 620px) {
+  .cw-table tbody .cluster-detail-row { display: block; padding: 0; }
+  .cw-table tbody .cluster-detail-row td { display: block; }
+  .cw-table tbody .cluster-detail-row td::before { display: none; }
+  .cluster-evidence { padding: 14px 16px; }
+}

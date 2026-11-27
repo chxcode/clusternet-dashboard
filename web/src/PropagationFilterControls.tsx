@@ -7,17 +7,16 @@ type PropagationFilterControlsProps = {
 
 export function PropagationFilterControls({ value, onChange }: PropagationFilterControlsProps) {
   return (
-    <div className="filters filters--single" aria-label="propagation filters">
-      <label>
-        按分发状态筛选
-        <select aria-label="按分发状态筛选" value={value} onChange={(event) => onChange(event.target.value as PropagationFilter)}>
-          <option value="all">全部目标集群</option>
-          <option value="observed">Observed</option>
-          <option value="not-observed">Not observed</option>
-          <option value="online-not-observed">Online but not observed</option>
-          <option value="offline">Offline</option>
-        </select>
-      </label>
+    <div className="pd-filter">
+      <label htmlFor="target-status">按分发状态筛选</label>
+      <select id="target-status" value={value} onChange={event => onChange(event.target.value as PropagationFilter)}>
+        <option value="all">全部目标集群</option>
+        <option value="observed">已回报</option>
+        <option value="not-observed">未回报</option>
+        <option value="online-not-observed">在线但未回报</option>
+        <option value="offline">集群未就绪</option>
+        <option value="unknown">集群连接状态未知</option>
+      </select>
     </div>
   );
 }

@@ -25,7 +25,7 @@ Install Go 1.26 or later and Node.js 22.x (22.13 or newer) with npm. Run these c
 ```sh
 npm ci --prefix web
 npm run build --prefix web
-go run ./cmd/clusternet-dashboard
+LISTEN_HOST=127.0.0.1 go run ./cmd/clusternet-dashboard
 ```
 
 Open [the local dashboard](http://localhost:8080/clusternet/). The Go server serves the built UI from `web/dist` (`STATIC_DIR`) on port `8080` (`PORT`). Rebuild the frontend and refresh the page after editing it. In another terminal, check that the server responds with `{"status":"ok"}`.
@@ -36,11 +36,17 @@ curl -fsS http://localhost:8080/clusternet/api/health
 
 For live data, set `KUBECONFIG` to a kubeconfig file for a Clusternet parent cluster before starting the server. If unset, the backend tries in-cluster credentials and then `~/.kube/config`. If it cannot create a Kubernetes client, the UI and health endpoint still work, and resource lists are empty. With a configured but unreachable cluster, resource requests can return errors.
 
+Set `KUBE_CONTEXT` to select a kubeconfig context for one dashboard process. Each write operation has its own switch. Set the required switches to `true` for a development cluster. Use disposable workloads and registration requests when exercising publication or deletion. Bind the server to `127.0.0.1` with `LISTEN_HOST`. [Deployment configuration](README.md#workspace-name-and-optional-operations)
+
 ## Verify your change
 
 Run the checks for each area you changed. Go and frontend tests run without a live cluster.
 
 - **Backend.** Format edited Go files with `gofmt`. Run `go test ./...` and `go build ./...` from the repository root.
+- **Failed-release deletion.** Exercise `DELETE /api/helmreleases/{namespace}/{name}` with a synthetic failed HelmRelease and its controlling Helm Description that still lists the chart. Check that a stale UID or resourceVersion and a missing, replaced or terminating owner all prevent deletion. The accepted response (HTTP 202) acknowledges the request. For a disposable end-to-end workload, check the replacement's new UID and deployment phase separately.
+- **Deploying an existing HelmChart.** With a fake Kubernetes client, exercise `POST /api/helmcharts/{namespace}/{name}/deployment-preview` and verify that its Kubernetes calls are reads. Confirm via `POST /api/helmcharts/{namespace}/{name}/deployments`, then read back the new Subscription. Check the source namespace, the single HelmChart feed, Replication, and the chosen scope (fixed registration IDs, a persistent Kubernetes label selector, or an explicit empty affinity for all clusters). Cover the 52-character subscription name limit used to keep derived controller labels valid. Verify zero matches and future registration or relabeling, then cover duplicate names, overlapping subscription targets and selection changes between preview and creation. Render the Helm chart with `--set releaseOperations.deployCharts=true` to verify its dedicated `create` permission on subscriptions.
+- **Publishing native YAML.** Exercise new and existing Shadow sources, selection changes, multiple files and partial failures against a fake API. Check that previews have no Kubernetes writes, native objects go only to the Shadow group, and a stale preview or identity cannot overwrite concurrent work.
+- **Withdrawing registration requests.** Cover failed and denied requests, an explicit namespace still waiting for approval, approved and already-allocated identities, and re-creation under the same name with a new UID. Check the UID and resourceVersion preconditions and orphan propagation on the single DELETE. Keep registration credentials out of fixtures and captured UI output.
 - **Frontend.** Run `npm test --prefix web` and `npm run build --prefix web`. For dependency changes, also run `npm audit --prefix web --audit-level=high`.
 - **Helm chart.** With Helm installed, lint the chart and inspect the rendered resources. Enable Ingress in the render to exercise its template.
 
@@ -50,9 +56,11 @@ Run the checks for each area you changed. Go and frontend tests run without a li
     --set ingress.enabled=true --set ingress.ingressClassName=nginx
   ```
 
+  To review deletion RBAC, render again with `--set releaseOperations.deleteFailedRelease=true` and compare the additional ClusterRole with the default render. It grants `delete` on `helmreleases` only.
+
 ## Open a pull request
 
-1. Add a test for changed behavior where practical. Preserve read-only cluster access and keep Kubernetes credentials on the backend. Update user-facing documentation and chart values when they change.
+1. Add a test for changed behavior where practical. Preserve read-only defaults and keep Kubernetes credentials on the backend. Exercise write operations against synthetic objects, including a concurrent edit where applicable. Update user-facing documentation and chart values when they change.
 2. Review `git status --short` and `git diff` before staging the intended files. Exclude local binaries, frontend build output, and incidental `web/tsconfig.tsbuildinfo` changes. Keep examples free of credentials, real cluster names, and private registry references.
 3. Commit the change and run `git push -u origin HEAD`. Open a pull request against `chxcode/clusternet-dashboard:main`. Describe the change, how you verified it, and any checks you could not run. For a visible UI change, a screenshot of the affected view helps reviewers.
 

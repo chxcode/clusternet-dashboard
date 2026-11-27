@@ -1,0 +1,13 @@
+.chart-version-dialog { font-size: 14px; }
+.chart-version-dialog h3 { margin: 18px 0 4px; font-size: 15px; }
+.chart-version-dialog p { margin-block: 8px; }
+.chart-version-dialog .label-impact { margin-top: 14px; }
+.chart-version-input { display: grid; gap: 4px; color: var(--text-muted); }
+.chart-version-input input {
+  width: 100%; box-sizing: border-box; padding: 7px 9px; border: 1px solid var(--control-border);
+  border-radius: 6px; background: var(--surface); color: var(--text); font: inherit;
+}
+.chart-version-subs, .chart-version-targets { max-height: 25vh; overflow: auto; overflow-wrap: anywhere; }
+.chart-version-subs { margin: 0; padding: 0; list-style: none; }
+.chart-version-subs li { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding-block: 6px; border-bottom: 1px solid var(--border); }
+.chart-version-subs li span:last-child { flex-shrink: 0; color: var(--text-muted); font-size: 12px; }

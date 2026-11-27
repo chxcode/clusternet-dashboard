@@ -1,0 +1,41 @@
+.workload-editor { width: min(720px, calc(100vw - 24px)); font-size: 13px; }
+.workload-toolbar, .workload-toolbar label, .workload-reset { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.workload-toolbar select, .workload-toolbar button, .workload-import, .workload-reset button {
+  padding: 5px 9px; color: var(--text); border: 1px solid var(--control-border); border-radius: 6px; background: var(--surface); font: inherit; cursor: pointer;
+}
+.workload-import { position: relative; overflow: hidden; }
+.workload-import input { position: absolute; inset: 0; opacity: 0; width: 100%; cursor: pointer; }
+.workload-import:focus-within { outline: 2px solid var(--accent); outline-offset: 1px; }
+.workload-reset { margin-top: 6px; }
+.workload-source { margin-block: 12px; }
+.workload-editor ul { margin: 5px 0 12px; padding-inline-start: 18px; max-height: 12rem; overflow: auto; }
+.workload-editor li { overflow-wrap: anywhere; white-space: pre-wrap; }
+.workload-editor .label-impact { overflow-wrap: anywhere; }
+.native-actions { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.native-publish .native-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 12px; margin: 12px 0 6px; }
+.native-grid label { display: grid; gap: 4px; color: var(--text-muted); }
+.native-grid input, .native-grid select { box-sizing: border-box; width: 100%; min-width: 0; padding: 6px 8px; font: inherit; color: var(--text); background: var(--surface); border: 1px solid var(--control-border); border-radius: 6px; }
+.native-grid input:read-only { background: var(--surface-muted); }
+.native-publish h3 { font-size: 14px; margin: 14px 0 5px; overflow-wrap: anywhere; }
+.native-publish summary { color: var(--accent); cursor: pointer; }
+.native-publish footer { flex-wrap: wrap; }
+.native-publish details { margin-block: 8px; }
+.native-publish details > pre { max-height: 15rem; overflow: auto; padding: 8px; background: var(--surface-muted); border-radius: 6px; }
+.native-publish .label-error { color: var(--danger); white-space: pre-wrap; overflow-wrap: anywhere; }
+.native-resources { list-style: none; padding: 0; }
+.native-resources li { display: flex; align-items: baseline; gap: 6px; }
+.native-resources span { flex-shrink: 0; font-size: 12px; color: var(--text-muted); }
+@media (max-width: 520px) { .native-publish .native-grid { grid-template-columns: 1fr; } }
+.native-label-picker { margin-block: 4px; }
+.native-label-picker section { border: 1px solid var(--border); background: var(--surface-muted); border-radius: 8px; padding: 10px; margin-top: 4px; }
+.native-label-picker label { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.native-label-picker input { width: min(100%, 18rem); min-width: 0; border: 1px solid var(--control-border); border-radius: 5px; padding: 4px 8px; color: var(--text); background: var(--surface); }
+.native-label-picker .native-label-options { display: flex; flex-wrap: wrap; padding: 0; margin: 4px 0; gap: 5px; list-style: none; }
+.native-label-options li { max-width: 100%; }
+.native-label-options button { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; border: 1px solid var(--control-border); padding: 4px 7px; border-radius: 6px; color: var(--text); background: var(--surface); font: inherit; cursor: pointer; }
+.native-label-options button:disabled { color: var(--accent); border-color: var(--accent); }
+.native-label-options button svg, .native-label-options button span { flex-shrink: 0; }
+.native-label-options code { text-align: start; overflow-wrap: anywhere; }
+.native-label-options span { font-size: 11px; color: var(--text-muted); }
+.native-label-picker .label-target { margin: 6px 0; }
+.native-label-pages { display: flex; justify-content: flex-end; align-items: center; gap: 8px; }

@@ -2,6 +2,10 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
+	"html"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/util/validation"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -12,10 +16,30 @@ import (
 )
 
 type options struct {
-	explorer *kube.Explorer
+	nativePublishing           bool
+	failedRegistrationDeletion bool
+	chartSourceEditing         bool
+	chartDeployment            bool
+	releaseDeletion            bool
+	releaseTriage              bool
+	chartVersionEditing        bool
+	triageStore                kube.TriageStore
+	labelEditing               bool
+	labelHosts                 map[string]bool
+	releaseHosts               map[string]bool
+	explorer                   *kube.Explorer
+	connection                 kube.ParentConnection
+	displayName                string
 }
 
 type Option func(*options)
+
+func WithParent(connection kube.ParentConnection, displayName string) Option {
+	return func(opts *options) {
+		opts.connection = connection
+		opts.displayName = strings.TrimSpace(displayName)
+	}
+}
 
 func WithExplorer(explorer *kube.Explorer) Option {
 	return func(opts *options) {
@@ -34,8 +58,27 @@ func New(cfg config.Config, opts ...Option) http.Handler {
 	apiPrefix := cfg.BasePath + "/api"
 
 	mux.HandleFunc(apiPrefix+"/health", writeJSON(map[string]string{"status": "ok"}))
+	mux.HandleFunc(apiPrefix+"/context", writeJSON(map[string]any{
+		"name": options.connection.Name, "inCluster": options.connection.InCluster,
+		"displayName": options.displayName, "configured": options.explorer != nil,
+		"version": config.BuildVersion(), "labelEditing": options.labelEditing && options.explorer != nil,
+		"releaseTriage":              options.releaseTriage && options.explorer != nil,
+		"releaseDeletion":            options.releaseDeletion && options.explorer != nil,
+		"nativePublishing":           options.nativePublishing && options.explorer != nil,
+		"failedRegistrationDeletion": options.failedRegistrationDeletion && options.explorer != nil,
+		"chartSourceEditing":         options.chartSourceEditing && options.explorer != nil,
+		"chartDeployment":            options.chartDeployment && options.explorer != nil,
+		"chartVersionEditing":        options.chartVersionEditing && options.explorer != nil,
+	}))
+	mux.HandleFunc(apiPrefix+"/helmrelease-events", helmReleaseEventsHandler(options.explorer))
+	mux.HandleFunc("GET "+apiPrefix+"/description-status", descriptionStatusHandler(options.explorer))
+	mux.HandleFunc("PATCH "+apiPrefix+"/clusters/{namespace}/{name}/labels", options.editClusterLabels)
+	mux.HandleFunc("GET "+apiPrefix+"/release-triage", options.triageStates)
+	mux.HandleFunc("POST "+apiPrefix+"/helmreleases/{namespace}/{name}/triage", options.editTriage)
+	mux.HandleFunc("DELETE "+apiPrefix+"/helmreleases/{namespace}/{name}", options.deleteFailedRelease)
 	mux.HandleFunc(apiPrefix+"/clusters", clustersHandler(options.explorer))
-	mux.HandleFunc(apiPrefix+"/subscriptions/", subscriptionDetailHandler(options.explorer))
+	mux.HandleFunc(apiPrefix+"/subscriptions/", http.NotFound)
+	mux.HandleFunc("GET "+apiPrefix+"/subscriptions/{namespace}/{name}", subscriptionDetailHandler(options.explorer))
 	mux.HandleFunc(apiPrefix+"/subscriptions", subscriptionsHandler(options.explorer))
 	mux.HandleFunc(apiPrefix+"/manifests", manifestsHandler(options.explorer))
 	mux.HandleFunc(apiPrefix+"/apps", writeJSON(map[string]any{"apps": []any{}}))
@@ -46,6 +89,21 @@ func New(cfg config.Config, opts ...Option) http.Handler {
 	mux.HandleFunc(apiPrefix+"/localizations", localizationsHandler(options.explorer))
 	mux.HandleFunc(apiPrefix+"/feedinventories", feedInventoriesHandler(options.explorer))
 	mux.HandleFunc(apiPrefix+"/helmreleases", helmReleasesHandler(options.explorer))
+	mux.HandleFunc("DELETE "+apiPrefix+"/registrations/{name}", options.deleteFailedRegistration)
+	mux.HandleFunc("POST "+apiPrefix+"/native-sources/{namespace}/{name}/{kind}", options.nativeSource)
+	mux.HandleFunc("POST "+apiPrefix+"/native-workloads/{namespace}/{name}/source", options.nativeWorkload("source"))
+	mux.HandleFunc("POST "+apiPrefix+"/native-workloads/{namespace}/{name}/preview", options.nativeWorkload("preview"))
+	mux.HandleFunc("POST "+apiPrefix+"/native-workloads/{namespace}/{name}/apply", options.nativeWorkload("apply"))
+	mux.HandleFunc("GET "+apiPrefix+"/registrations", catalogHandler(options.explorer, "registrations", (*kube.Explorer).Registrations))
+	mux.HandleFunc("GET "+apiPrefix+"/helmcharts", catalogHandler(options.explorer, "helmCharts", (*kube.Explorer).HelmCharts))
+	mux.HandleFunc("GET "+apiPrefix+"/helmcharts/{namespace}/{name}/version-impact", options.chartVersionImpact)
+	mux.HandleFunc("POST "+apiPrefix+"/helmcharts/{namespace}/{name}/version", options.changeChartVersion)
+	mux.HandleFunc("POST "+apiPrefix+"/helmcharts/{namespace}/{name}/deployment-preview", options.deploymentHandler(false))
+	mux.HandleFunc("POST "+apiPrefix+"/helmcharts/{namespace}/{name}/deployments", options.deploymentHandler(true))
+	mux.HandleFunc("POST "+apiPrefix+"/helmcharts/{namespace}/{name}/source", options.chartSourceHandler("read"))
+	mux.HandleFunc("POST "+apiPrefix+"/helmcharts/{namespace}/{name}/source-preview", options.chartSourceHandler("preview"))
+	mux.HandleFunc("POST "+apiPrefix+"/helmcharts/{namespace}/{name}/source-save", options.chartSourceHandler("save"))
+	mux.HandleFunc("GET "+apiPrefix+"/bases", catalogHandler(options.explorer, "bases", (*kube.Explorer).Bases))
 	mux.HandleFunc(apiPrefix+"/diagnostics", diagnosticsHandler(options.explorer))
 
 	mountStatic(mux, cfg)
@@ -146,7 +204,10 @@ func serveIndex(w http.ResponseWriter, indexPath string, basePath string) {
 		return
 	}
 
-	body := strings.ReplaceAll(string(content), "%BASE_PATH%", basePath)
+	baseJSON, _ := json.Marshal(basePath)
+	body := strings.ReplaceAll(string(content), `"%BASE_PATH%"`, string(baseJSON))
+	assetBase := html.EscapeString(basePath) + "/assets/"
+	body = strings.NewReplacer(`src="./assets/`, `src="`+assetBase, `href="./assets/`, `href="`+assetBase).Replace(body)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	_, _ = w.Write([]byte(body))
 }
@@ -187,13 +248,7 @@ func subscriptionDetailHandler(explorer *kube.Explorer) http.HandlerFunc {
 			writeJSON(map[string]any{"summary": nil, "feeds": []any{}, "targetClusters": []any{}})(w, r)
 			return
 		}
-		parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
-		if len(parts) < 5 {
-			http.NotFound(w, r)
-			return
-		}
-		namespace := parts[len(parts)-2]
-		name := parts[len(parts)-1]
+		namespace, name := r.PathValue("namespace"), r.PathValue("name")
 		detail, err := explorer.SubscriptionDetail(r.Context(), namespace, name)
 		if err != nil {
 			writeError(w, err)
@@ -323,6 +378,47 @@ func helmReleasesHandler(explorer *kube.Explorer) http.HandlerFunc {
 	}
 }
 
+func helmReleaseEventsHandler(explorer *kube.Explorer) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		namespace, uid := r.URL.Query().Get("namespace"), r.URL.Query().Get("uid")
+		if len(validation.IsDNS1123Label(namespace)) > 0 || len(validation.IsDNS1123Subdomain(uid)) > 0 {
+			http.Error(w, "valid namespace and uid required", http.StatusBadRequest)
+			return
+		}
+		if explorer == nil {
+			http.Error(w, "Kubernetes client unavailable", http.StatusServiceUnavailable)
+			return
+		}
+		events, err := explorer.HelmReleaseEvents(r.Context(), namespace, uid)
+		if err != nil {
+			writeError(w, err)
+			return
+		}
+		writeJSON(map[string]any{"events": events})(w, r)
+	}
+}
+
+func descriptionStatusHandler(explorer *kube.Explorer) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		query := r.URL.Query()
+		namespace, name, uid := query.Get("namespace"), query.Get("name"), query.Get("uid")
+		if len(validation.IsDNS1123Label(namespace)) > 0 || len(validation.IsDNS1123Subdomain(name)) > 0 || len(validation.IsDNS1123Subdomain(uid)) > 0 {
+			http.Error(w, "valid namespace, name and uid required", http.StatusBadRequest)
+			return
+		}
+		if explorer == nil {
+			http.Error(w, "Kubernetes client unavailable", http.StatusServiceUnavailable)
+			return
+		}
+		status, err := explorer.DescriptionStatus(r.Context(), namespace, name, uid)
+		if err != nil {
+			writeError(w, err)
+			return
+		}
+		writeJSON(status)(w, r)
+	}
+}
+
 func diagnosticsHandler(explorer *kube.Explorer) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if explorer == nil {
@@ -340,7 +436,14 @@ func diagnosticsHandler(explorer *kube.Explorer) http.HandlerFunc {
 
 func writeError(w http.ResponseWriter, err error) {
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusInternalServerError)
+	code := http.StatusInternalServerError
+	var status apierrors.APIStatus
+	if errors.As(err, &status) {
+		if upstream := int(status.Status().Code); upstream >= 400 && upstream < 600 {
+			code = upstream
+		}
+	}
+	w.WriteHeader(code)
 	_ = json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 }
 

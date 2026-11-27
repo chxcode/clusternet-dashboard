@@ -1,0 +1,92 @@
+/* System preference applies until the user selects a mode. Both palettes retain
+   distinct health colors so a change of accent never changes status meaning. */
+:root {
+  color-scheme: light dark;
+  --canvas: light-dark(#f4f7f6, #12181b);
+  --surface: light-dark(#ffffff, #1b2328);
+  --surface-muted: light-dark(#f3f6f5, #222d32);
+  --surface-hover: light-dark(#edf3f1, #29373c);
+  --text: light-dark(#20352f, #edf3f1);
+  --text-muted: light-dark(#51645e, #b1c0bb);
+  --border: light-dark(#d9e3de, #37454a);
+  --control-border: light-dark(#acbcb5, #607079);
+  --good: light-dark(#116448, #8be0b7);
+  --good-bg: light-dark(#e2f4ea, #173c31);
+  --danger: light-dark(#99382f, #ffac9f);
+  --danger-bg: light-dark(#fcece8, #462b2a);
+  --warning: light-dark(#7b520d, #f2c877);
+  --warning-bg: light-dark(#fff2d3, #423723);
+  --neutral: light-dark(#4e626f, #c0cfd7);
+  --neutral-bg: light-dark(#edf1f3, #303e47);
+  --chart-good: light-dark(#277c66, #67b99d);
+  --chart-failed: light-dark(#bd554a, #de8073);
+  --chart-pending: light-dark(#bb8533, #dcb161);
+  --chart-unknown: light-dark(#8899a0, #92a1ac);
+  --chart-other: light-dark(#746e9e, #a39bc8);
+  --shadow: light-dark(rgb(21 44 36 / 9%), rgb(0 0 0 / 30%));
+  --scrim: light-dark(rgb(17 34 28 / 32%), rgb(0 0 0 / 65%));
+
+  --accent: light-dark(#116951, #8bd9bc);
+  --accent-bg: light-dark(#e4f3ec, #203e34);
+  --nav-bg: light-dark(#162e29, #10251f);
+  --nav-active: light-dark(#305548, #264a3c);
+  --nav-highlight: #b0edcf;
+  --nav-text: #dbe8e3;
+}
+:root[data-mode="light"] { color-scheme: light; }
+:root[data-mode="dark"] { color-scheme: dark; }
+:root[data-accent="blue"] {
+  --accent: light-dark(#235b9c, #9fcaff);
+  --accent-bg: light-dark(#e8f1fc, #243951);
+  --nav-bg: light-dark(#182e46, #122337);
+  --nav-active: light-dark(#304c70, #2b4565);
+  --nav-highlight: #b6dbff;
+}
+:root[data-accent="violet"] {
+  --accent: light-dark(#684594, #d3b7fa);
+  --accent-bg: light-dark(#f1ebfa, #3a304c);
+  --nav-bg: light-dark(#30253e, #231d2e);
+  --nav-active: light-dark(#564167, #483755);
+  --nav-highlight: #e5c9fc;
+}
+
+.workspace-actions, .theme-controls { display: flex; align-items: center; flex: none; }
+.workspace-actions { gap: 12px; }
+.theme-controls { position: relative; gap: 4px; }
+.theme-trigger, .theme-toggle {
+  display: inline-flex; gap: 5px; align-items: center; justify-content: center;
+  padding: 0 9px; min-width: 34px; height: 34px;
+  border: 1px solid var(--border); border-radius: 6px;
+  background: var(--surface); color: var(--text-muted); font: inherit; font-size: 12px; cursor: pointer;
+}
+.theme-trigger { list-style: none; }
+.theme-trigger::-webkit-details-marker { display: none; }
+.theme-trigger:hover, .theme-toggle:hover, .theme-options[open] .theme-trigger {
+  color: var(--accent); background: var(--accent-bg); border-color: var(--accent);
+}
+.theme-panel {
+  position: absolute; right: 0; top: calc(100% + 8px); z-index: 6; width: min(272px, calc(100vw - 26px));
+  padding: 14px; background: var(--surface); border: 1px solid var(--border);
+  color: var(--text); border-radius: 10px; box-shadow: 0 8px 32px var(--shadow);
+}
+.theme-panel fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
+.theme-panel fieldset + fieldset { margin-top: 14px; }
+.theme-panel legend { margin-bottom: 6px; padding: 0; font-size: 12px; font-weight: 600; color: var(--text-muted); }
+.theme-choices { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
+.theme-choice { display: flex; min-width: 0; }
+.theme-choice input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.theme-choice span {
+  display: flex; justify-content: center; align-items: center; gap: 5px; width: 100%; min-height: 34px;
+  padding: 3px; border: 1px solid var(--border); border-radius: 5px; font-size: 12px; cursor: pointer;
+}
+.theme-choice input:checked + span { font-weight: 650; border-color: var(--accent); color: var(--accent); background: var(--accent-bg); }
+.theme-choice input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 1px; }
+.theme-choice i { width: 10px; height: 10px; border-radius: 50%; }
+.theme-choice i[data-swatch="teal"] { background: light-dark(#1a755d, #8bd9bc); }
+.theme-choice i[data-swatch="blue"] { background: light-dark(#3066a3, #9fcaff); }
+.theme-choice i[data-swatch="violet"] { background: light-dark(#764f9d, #d3b7fa); }
+@media (max-width: 600px) {
+  .workspace-actions { gap: 6px; }
+  .theme-toggle, .theme-trigger { min-width: 32px; height: 32px; padding: 0 6px; }
+  .theme-toggle span, .theme-trigger span { display: none; }
+}

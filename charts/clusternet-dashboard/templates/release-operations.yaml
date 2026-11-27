@@ -1,0 +1,133 @@
+{{- $fullname := include "clusternet-dashboard.fullname" . }}
+{{- $store := printf "%s-triage" $fullname }}
+{{- if .Values.releaseOperations.triage }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $store }}
+  annotations:
+    helm.sh/resource-policy: keep
+  labels:
+    {{- include "clusternet-dashboard.labels" . | nindent 4 }}
+{{- if .Values.rbac.create }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ $store }}
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    resourceNames: [{{ $store | quote }}]
+    verbs: ["get", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ $store }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ $store }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "clusternet-dashboard.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+{{- end }}
+{{- end }}
+{{- if and .Values.releaseOperations.chartVersionEditing .Values.rbac.create }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ $fullname }}-chart-version
+rules:
+  - apiGroups: ["apps.clusternet.io"]
+    resources: ["helmcharts"]
+    verbs: ["patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ $fullname }}-chart-version
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ $fullname }}-chart-version
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "clusternet-dashboard.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+{{- end }}
+{{- if and .Values.releaseOperations.deleteFailedRelease .Values.rbac.create }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ $fullname }}-release-delete
+rules:
+  - apiGroups: ["apps.clusternet.io"]
+    resources: ["helmreleases"]
+    verbs: ["delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ $fullname }}-release-delete
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ $fullname }}-release-delete
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "clusternet-dashboard.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+{{- end }}
+{{- if and .Values.releaseOperations.deployCharts .Values.rbac.create }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ $fullname }}-deploy
+rules:
+  - apiGroups: ["apps.clusternet.io"]
+    resources: ["subscriptions"]
+    verbs: ["create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ $fullname }}-deploy
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ $fullname }}-deploy
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "clusternet-dashboard.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+{{- end }}
+{{- if and .Values.releaseOperations.editChartSources .Values.rbac.create }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ $fullname }}-chart-source
+rules:
+  - apiGroups: ["apps.clusternet.io"]
+    resources: ["helmcharts"]
+    verbs: ["create", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ $fullname }}-chart-source
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ $fullname }}-chart-source
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "clusternet-dashboard.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+{{- end }}

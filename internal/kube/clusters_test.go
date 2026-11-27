@@ -13,8 +13,8 @@ func TestManagedClusterSummaryUsesReadyzForOnlineStatus(t *testing.T) {
 			"namespace": "clusternet-system",
 		},
 		"status": map[string]any{
-			"readyz":      true,
-			"k8sVersion":  "v1.30.0",
+			"readyz":       true,
+			"k8sVersion":   "v1.30.0",
 			"apiserverURL": "https://child-a.example.com",
 		},
 	}}
@@ -70,7 +70,7 @@ func TestManagedClusterSummaryUsesReadyConditionForOnlineStatus(t *testing.T) {
 	}
 }
 
-func TestManagedClusterSummaryMarksMissingHealthOffline(t *testing.T) {
+func TestManagedClusterSummaryMarksMissingHealthUnknown(t *testing.T) {
 	cluster := &unstructured.Unstructured{Object: map[string]any{
 		"metadata": map[string]any{"name": "child-c"},
 		"status":   map[string]any{},
@@ -81,7 +81,25 @@ func TestManagedClusterSummaryMarksMissingHealthOffline(t *testing.T) {
 	if summary.Online {
 		t.Fatalf("expected cluster without health signals to be offline: %#v", summary)
 	}
-	if summary.Status != "Offline" {
-		t.Fatalf("expected status Offline, got %q", summary.Status)
+	if summary.Status != "Unknown" {
+		t.Fatalf("expected status Unknown, got %q", summary.Status)
+	}
+}
+
+func TestManagedClusterHonorsReadyConditionOverProbes(t *testing.T) {
+	for condition, want := range map[string]string{"False": "NotReady", "Unknown": "Unknown", "True": "Online"} {
+		cluster := &unstructured.Unstructured{Object: map[string]any{"status": map[string]any{
+			"livez": true, "conditions": []any{map[string]any{"type": "Ready", "status": condition}},
+		}}}
+		if got := NewManagedClusterSummary(cluster); got.Status != want || got.Online != (want == "Online") {
+			t.Errorf("Ready=%s: got %s/online=%t", condition, got.Status, got.Online)
+		}
+	}
+}
+
+func TestUnreadyProbeTakesPrecedenceOverLiveProbe(t *testing.T) {
+	cluster := &unstructured.Unstructured{Object: map[string]any{"status": map[string]any{"readyz": false, "livez": true}}}
+	if got := NewManagedClusterSummary(cluster); got.Online || got.Status != "NotReady" {
+		t.Fatalf("readyz=false, livez=true: got %s/online=%t", got.Status, got.Online)
 	}
 }

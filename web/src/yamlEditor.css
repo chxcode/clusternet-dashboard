@@ -1,0 +1,42 @@
+.yaml-editor { margin-block: 10px; min-width: 0; }
+.label-editor:is(.workload-editor, .source-editor) { max-height: min(92dvh, 60rem); }
+.label-editor:is(.workload-editor, .source-editor) footer {
+  position: sticky; bottom: 0; z-index: 1; padding-bottom: 4px; background: var(--surface);
+}
+.yaml-title { display: block; margin-bottom: 5px; font-size: 13px; color: var(--text-muted); }
+.yaml-stage { position: relative; isolation: isolate; min-width: 0; overflow: hidden; border: 1px solid var(--control-border); border-radius: 7px; background: var(--surface-muted); }
+.yaml-stage:focus-within { outline: 2px solid var(--accent); outline-offset: 1px; }
+.yaml-editor .yaml-stage .yaml-input, .yaml-editor .yaml-stage .yaml-paint, .yaml-editor .yaml-stage .yaml-measure {
+  font: 13px/20px ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: normal; tab-size: 2;
+  text-align: left; direction: ltr; white-space: pre; overflow-wrap: normal; word-break: normal; text-transform: none;
+  font-variant-ligatures: none; text-indent: 0; box-sizing: border-box; border: 0; border-radius: 0; margin: 0; padding: 10px;
+}
+.yaml-editor .yaml-stage .yaml-input { display: block; position: relative; width: 100%; height: clamp(12rem, 37vh, 26rem); min-height: 6rem;
+  resize: vertical; outline: none; color: var(--text); background: transparent; caret-color: var(--text); overflow: auto; }
+.yaml-editor .yaml-stage[data-highlighted=true] .yaml-input { color: transparent; -webkit-text-fill-color: transparent; }
+.yaml-editor .yaml-stage .yaml-input::selection { color: var(--text); -webkit-text-fill-color: var(--text); background: var(--accent-bg); }
+.yaml-editor .yaml-input::placeholder { color: var(--text-muted); opacity: .9; }
+.yaml-overlay { overflow: hidden; position: absolute; inset: 0; pointer-events: none; user-select: none; }
+.yaml-editor .yaml-stage .yaml-paint { position: absolute; top: 0; left: 0; width: max-content; min-width: 100%; max-width: none; max-height: none; overflow: visible;
+  background: transparent; color: var(--text); }
+.yaml-editor .yaml-stage .yaml-measure { width: max-content; position: absolute; visibility: hidden; pointer-events: none; padding: 0; }
+.yaml-token-key { color: light-dark(#165e7b, #8acfed); }
+.yaml-token-string { color: light-dark(#226137, #a8d9a4); }
+.yaml-token-number { color: light-dark(#935013, #f4b680); }
+.yaml-token-boolean, .yaml-token-null { color: light-dark(#714493, #d8acef); }
+.yaml-token-comment { color: light-dark(#56616b, #a8b3be); }
+.yaml-token-marker { color: light-dark(#83553d, #dfb797); }
+.yaml-feedback { font-size: 12px; color: var(--text-muted); }
+.yaml-feedback p, .yaml-feedback ol { margin: 6px 0; }
+.yaml-feedback ol { padding-inline-start: 20px; }
+.yaml-feedback li { overflow-wrap: anywhere; }
+.yaml-feedback button { font: inherit; cursor: pointer; color: var(--accent); background: none; border: 0; text-decoration: underline; padding: 0; }
+@media (forced-colors: active) {
+  .yaml-overlay { display: none; }
+  .yaml-editor .yaml-stage[data-highlighted=true] .yaml-input { color: CanvasText; -webkit-text-fill-color: CanvasText; }
+}
+
+.yaml-editor[data-invalid=true] .yaml-stage { border-color: var(--danger); }
+.yaml-editor[data-invalid=true] .yaml-stage:focus-within { outline-color: var(--danger); }
+.yaml-editor[data-invalid=true] .yaml-feedback p { color: var(--danger); font-weight: 600; }
+.yaml-editor[data-invalid=true] .yaml-feedback button { color: var(--danger); }

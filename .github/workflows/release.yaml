@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Release tag, for example v0.1.0'
+        description: 'Release tag recorded in this checkout, for example v1.2.3'
         required: true
         type: string
 
@@ -28,26 +28,21 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Derive release version
+      - name: Check release version
         id: version
         shell: bash
+        env:
+          DISPATCH_TAG: ${{ inputs.tag }}
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            release_tag="${{ inputs.tag }}"
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+            release_tag="$DISPATCH_TAG"
           else
-            release_tag="${GITHUB_REF_NAME}"
+            release_tag="$GITHUB_REF_NAME"
           fi
+          python3 scripts/release-version.py check "$release_tag"
 
-          if [[ ! "${release_tag}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
-            echo "Release tag must look like v0.1.0 or v0.1.0-rc.1, got: ${release_tag}" >&2
-            exit 1
-          fi
-
-          chart_version="${release_tag#v}"
           echo "release_tag=${release_tag}" >> "$GITHUB_OUTPUT"
-          echo "chart_version=${chart_version}" >> "$GITHUB_OUTPUT"
-          echo "RELEASE_TAG=${release_tag}" >> "$GITHUB_ENV"
-          echo "CHART_VERSION=${chart_version}" >> "$GITHUB_ENV"
+          echo "CHART_VERSION=${release_tag#v}" >> "$GITHUB_ENV"
 
       - name: Setup Go
         uses: actions/setup-go@v5
@@ -95,6 +90,8 @@ jobs:
           context: .
           platforms: linux/amd64,linux/arm64
           push: true
+          build-args: |
+            DASHBOARD_VERSION=${{ steps.version.outputs.release_tag }}
           tags: |
             ${{ env.IMAGE_REPOSITORY }}:${{ steps.version.outputs.release_tag }}
             ${{ env.IMAGE_REPOSITORY }}:latest
@@ -105,30 +102,11 @@ jobs:
             org.opencontainers.image.version=${{ steps.version.outputs.release_tag }}
             org.opencontainers.image.revision=${{ github.sha }}
 
-      - name: Prepare Helm chart release values
-        shell: bash
-        run: |
-          python3 - <<'PY'
-          import os
-          import re
-          from pathlib import Path
-
-          release_tag = os.environ['RELEASE_TAG']
-          values_path = Path(os.environ['CHART_PATH']) / 'values.yaml'
-          text = values_path.read_text()
-          text = re.sub(r'(?m)^(\s*repository:\s*).+$', r'\1changxuan/clusternet-dashboard', text, count=1)
-          text = re.sub(r'(?m)^(\s*tag:\s*).+$', rf'\1{release_tag}', text, count=1)
-          values_path.write_text(text)
-          PY
-
       - name: Package Helm chart
         shell: bash
         run: |
           mkdir -p dist
-          helm package "$CHART_PATH" \
-            --version "$CHART_VERSION" \
-            --app-version "$RELEASE_TAG" \
-            --destination dist
+          helm package "$CHART_PATH" --destination dist
 
       - name: Login to Docker Hub for Helm OCI push
         shell: bash

@@ -1,0 +1,37 @@
+.cluster-name-line, .copy-control, .copy-icon, .label-edit, .label-add, .label-icon { display: inline-flex; align-items: center; }
+.cluster-name-line { gap: 4px; flex-wrap: wrap; }
+.copy-control { position: relative; }
+.copy-icon, .label-edit, .label-add, .label-icon {
+  border: 0; background: transparent; color: var(--accent); cursor: pointer; font: inherit; gap: 4px;
+}
+.copy-icon, .label-icon { justify-content: center; width: 27px; min-height: 27px; padding: 3px; border-radius: 5px; }
+.copy-icon:hover, .label-icon:hover { background: var(--accent-bg); }
+.copy-feedback { position: absolute; top: 100%; left: 1px; z-index: 1; width: max-content; max-width: 13em; font-size: 11px; font-weight: 500; }
+.copy-feedback:not(:empty) { background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: 4px; padding: 2px 4px; }
+.cluster-labels { display: grid; justify-items: start; gap: 5px; }
+.cluster-labels summary, .label-change-details summary { cursor: pointer; color: var(--accent); font-size: 12px; }
+.cluster-labels details { min-width: 0; max-width: 100%; }
+.cluster-labels details .label-chips { margin-top: 6px; }
+.label-chips { display: flex; align-items: flex-start; flex-wrap: wrap; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.label-chips li { display: inline-block; max-width: min(100%, 24ch); border: 1px solid var(--border); background: var(--surface-muted); border-radius: 10px; padding: 2px 7px; color: var(--text); font-size: 11px; overflow-wrap: anywhere; }
+.label-edit, .label-add { padding: 3px 0; font-size: 12px; font-weight: 600; }
+.label-editor { width: min(540px, calc(100vw - 32px)); box-sizing: border-box; max-height: min(82vh, 780px); overflow: auto; border: 1px solid var(--border); border-radius: 14px; padding: 18px; color: var(--text); background: var(--surface); text-align: start; }
+.label-editor::backdrop { background: rgb(12 23 24 / 52%); }
+.label-editor header, .label-editor footer { display: flex; align-items: center; gap: 10px; }
+.label-editor header { justify-content: space-between; }
+.label-editor h2 { margin: 0; font-size: 18px; }
+.label-target, .label-impact { font-size: 13px; margin: 5px 0 12px; overflow-wrap: anywhere; color: var(--text-muted); }
+.label-impact { padding: 8px 10px; border-radius: 6px; background: var(--surface-muted); }
+.label-editor fieldset { min-width: 0; padding: 0; border: 0; margin: 0; }
+.label-fields { display: grid; gap: 8px; }
+.label-field-row { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) auto; align-items: end; gap: 8px; }
+.label-field-row label { display: grid; gap: 3px; color: var(--text-muted); font-size: 11px; }
+.label-field-row input { width: 100%; box-sizing: border-box; margin: 0; min-width: 0; border: 1px solid var(--control-border); border-radius: 6px; padding: 6px 7px; background: var(--surface); color: var(--text); font: inherit; font-size: 13px; }
+.label-remove, .label-editor p.label-error { color: var(--danger); }
+.label-editor .label-add { margin-top: 10px; }
+.label-change-details { margin-top: 10px; font-size: 12px; }
+.label-change-details ul { margin: 6px 0; padding-left: 18px; overflow-wrap: anywhere; }
+.label-editor footer { justify-content: flex-end; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+.label-editor footer button { cursor: pointer; padding: 6px 12px; background: var(--surface); border: 1px solid var(--control-border); border-radius: 6px; color: var(--text); font: inherit; }
+.label-editor footer button.label-save { color: var(--accent); border-color: var(--accent); background: var(--accent-bg); font-weight: 600; }
+.label-editor button:disabled { opacity: .6; cursor: default; }

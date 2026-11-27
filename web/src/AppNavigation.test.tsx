@@ -1,52 +1,37 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App';
 
-describe('App navigation layout', () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
+const json = (value: unknown) => new Response(JSON.stringify(value));
+const sub = (name: string) => ({ name, namespace: 'apps', status: 'Progressing', desiredReleases: 2, completedReleases: 0,
+  observedReleases: 1, completionKnown: false, bindingClusterCount: 2, bindingClusters: [] });
 
-  it('uses a sidebar menu and switches between dashboard pages', async () => {
-    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
-      const url = String(input);
-      if (url.endsWith('/clusters')) {
-        return new Response(JSON.stringify({ clusters: [] }));
-      }
-      if (url.endsWith('/subscriptions')) {
-        return new Response(JSON.stringify({ subscriptions: [] }));
-      }
-      if (url.endsWith('/manifests')) {
-        return new Response(JSON.stringify({ manifests: [] }));
-      }
-      if (url.endsWith('/globalizations')) {
-        return new Response(JSON.stringify({ globalizations: [] }));
-      }
-      if (url.endsWith('/localizations')) {
-        return new Response(JSON.stringify({ localizations: [] }));
-      }
-      if (url.endsWith('/feedinventories')) {
-        return new Response(JSON.stringify({ feedInventories: [] }));
-      }
-      if (url.endsWith('/helmreleases')) {
-        return new Response(JSON.stringify({ helmReleases: [] }));
-      }
-      if (url.endsWith('/diagnostics')) {
-        return new Response(JSON.stringify({ resources: [], components: [], readOnlyRBACChecks: [] }));
-      }
-      return new Response('{}');
-    }));
+beforeEach(() => window.history.replaceState({}, '', '/'));
+afterEach(() => vi.unstubAllGlobals());
 
+describe('workspace navigation', () => {
+  it('recovers a subscription and filter from a direct URL and ignores a stale response after history navigation', async () => {
+    window.history.replaceState({}, '', '/propagation?namespace=apps&name=one&filter=offline');
+    let finishOld: (r: Response) => void = () => {};
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const path = String(input);
+      if (path.endsWith('/context')) return json({ name: 'hub-test', configured: true });
+      if (path.endsWith('/subscriptions')) return json({ subscriptions: [sub('one'), sub('two')] });
+      if (path.endsWith('/apps/one')) return new Promise<Response>(resolve => { finishOld = resolve; });
+      if (path.endsWith('/apps/two')) return json({ summary: sub('two'), feeds: [], targetClusters: [] });
+      return json({});
+    });
+    vi.stubGlobal('fetch', fetchMock);
     render(<App />);
-
-    expect(screen.getByRole('navigation', { name: 'Dashboard navigation' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Managed Clusters' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Diagnostics' })).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Diagnostics' }));
-
+    expect(await screen.findByText(/正在加载 apps \/ one/)).toBeInTheDocument();
+    act(() => { window.history.pushState({}, '', '/propagation?namespace=apps&name=two&filter=offline'); window.dispatchEvent(new PopStateEvent('popstate')); });
+    expect(within(await screen.findByRole('region', { name: '订阅详情' })).getByText('two')).toBeInTheDocument();
+    expect(screen.getByLabelText('按分发状态筛选')).toHaveValue('offline');
+    await act(async () => { finishOld(json({ summary: sub('one'), feeds: [], targetClusters: [] })); });
+    expect(within(screen.getByRole('region', { name: '订阅详情' })).getByText('two')).toBeInTheDocument();
+    expect(fetchMock.mock.calls.some(([path]) => String(path).endsWith('/diagnostics'))).toBe(false);
+    fireEvent.click(screen.getByRole('link', { name: '集群诊断' }));
     await waitFor(() => expect(window.location.pathname).toBe('/diagnostics'));
-    expect(screen.getByRole('heading', { name: 'Diagnostics' })).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'Overview' })).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '集群诊断' })).toBeInTheDocument();
   });
 });

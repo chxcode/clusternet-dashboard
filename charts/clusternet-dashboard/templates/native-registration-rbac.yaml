@@ -1,0 +1,51 @@
+{{- $fullname := include "clusternet-dashboard.fullname" . }}
+{{- if and .Values.rbac.create .Values.releaseOperations.publishNativeWorkloads }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ $fullname }}-native-publisher
+rules:
+  - apiGroups: ["shadow"]
+    resources: ["deployments", "services", "configmaps"]
+    verbs: ["get", "create", "patch"]
+  - apiGroups: ["apps.clusternet.io"]
+    resources: ["subscriptions"]
+    verbs: ["create", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ $fullname }}-native-publisher
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ $fullname }}-native-publisher
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "clusternet-dashboard.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+{{- end }}
+{{- if and .Values.rbac.create .Values.registrationOperations.deleteFailedRequests }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ $fullname }}-registration-delete
+rules:
+  - apiGroups: ["clusters.clusternet.io"]
+    resources: ["clusterregistrationrequests"]
+    verbs: ["delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ $fullname }}-registration-delete
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ $fullname }}-registration-delete
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "clusternet-dashboard.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+{{- end }}

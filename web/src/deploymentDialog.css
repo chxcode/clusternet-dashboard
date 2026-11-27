@@ -1,0 +1,31 @@
+.chart-row-actions, .deploy-heading, .deploy-selection-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; }
+.deployment-dialog { width: min(560px, calc(100vw - 24px)); font-size: 14px; overflow-wrap: anywhere; }
+.deployment-dialog h3 { margin: 12px 0 6px; font-size: 14px; }
+.deployment-dialog small { color: var(--text-muted); font-size: 12px; }
+.deploy-input { display: grid; gap: 4px; }
+.deploy-input input, .deploy-input select, .deploy-search { width: 100%; box-sizing: border-box; padding: 7px 8px; border: 1px solid var(--control-border); border-radius: 6px; color: var(--text); background: var(--surface); font: inherit; }
+.deploy-mode { margin-block-start: 12px; }
+.deploy-candidate-note, .deploy-fixed-selector { margin: 6px 0; color: var(--text-muted); font-size: 12px; }
+.deploy-fixed-selector summary { color: var(--accent); cursor: pointer; }
+.deploy-fixed-selector code { display: block; max-height: 7rem; overflow: auto; margin-block-start: 5px; }
+.deploy-warnings { margin: 8px 0; padding: 8px 10px; border-inline-start: 2px solid var(--warning); background: var(--warning-bg); }
+.deploy-warnings ul { padding-inline-start: 18px; margin-block: 5px; }
+.deploy-heading { justify-content: space-between; margin: 16px 0 7px; }
+.deploy-heading h3 { margin: 0; }
+.deploy-selection-tools { justify-content: space-between; margin-block: 6px; }
+.deploy-targets { max-height: min(30vh, 18rem); overflow: auto; margin: 6px 0; padding: 0; list-style: none; border-block: 1px solid var(--border); }
+.deploy-targets li { padding: 7px 4px; }
+.deploy-targets li + li { border-top: 1px solid var(--border); }
+.deploy-targets label { display: flex; gap: 8px; align-items: flex-start; cursor: pointer; }
+.deploy-targets input { flex: none; accent-color: var(--accent); }
+.deploy-targets strong, .deploy-targets small { display: block; }
+.deploy-targets strong { font-weight: 550; }
+.deploy-targets small { margin-top: 2px; }
+.deploy-connectivity { flex-shrink: 0; margin-inline-start: auto; color: var(--text-muted); font-size: 12px; }
+.deploy-facts { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 16px; }
+.deploy-facts dt { color: var(--text-muted); }
+.deploy-facts dd { margin: 0; }
+.deployment-dialog .label-impact { margin-top: 12px; }
+.deployment-dialog footer { flex-wrap: wrap; }
+
+.subscription-yaml { max-height:30vh; overflow:auto; padding:8px; background:var(--surface); font:12px/1.5 ui-monospace,monospace; }

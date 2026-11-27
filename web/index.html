@@ -1,11 +1,24 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
     <title>Clusternet Dashboard</title>
     <script>
       window.__CLUSTERNET_DASHBOARD_BASE_PATH__ = "%BASE_PATH%";
+      // Apply explicit preferences before the stylesheet paints the workspace.
+      try {
+        const appearance = JSON.parse(localStorage.getItem("clusternet.appearance") || "{}");
+        if (appearance.mode === "light" || appearance.mode === "dark") {
+          document.documentElement.dataset.mode = appearance.mode;
+        }
+        if (typeof appearance.accent === "string") {
+          document.documentElement.dataset.accent = appearance.accent;
+        }
+      } catch {
+        // The default color scheme follows the browser.
+      }
     </script>
   </head>
   <body>
